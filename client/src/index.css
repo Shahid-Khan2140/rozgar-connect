@@ -1,0 +1,56 @@
+/* GLOBAL VARIABLES - Professional Color Palette */
+:root {
+  --primary: #0f2a44;  /* The "Government" Dark Blue */
+  --accent: #ff9800;   /* The "Rozgar" Orange */
+  --bg: #f0f2f5;       /* Light Professional Background */
+  --white: #ffffff;
+  --text-dark: #333;
+  --text-light: #fff;
+  --shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+/* Base Resets */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--bg); /* Uses the variable above */
+  color: var(--text-dark);
+}
+
+/* Global Link Styles */
+a {
+  font-weight: 500;
+  text-decoration: none;
+  color: var(--primary);
+  transition: 0.3s;
+}
+
+a:hover {
+  color: var(--accent);
+}
+
+/* Global Headings */
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-weight: 700;
+}
+
+/* Global Inputs */
+input, select, textarea {
+  font-family: inherit;
+  outline: none;
+}
+
+/* Global Button Reset */
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
