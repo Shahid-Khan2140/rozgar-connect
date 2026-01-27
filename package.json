@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
+    "start": "node server/server.js",
+    "dev": "nodemon server/server.js",
     "build": "cd client && npm install && npm run build && cd .. && node move-build.js"
   },
   "keywords": [],
