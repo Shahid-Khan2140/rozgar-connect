@@ -1,15 +1,39 @@
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import "../../App.css";
 import { API_URL } from "../../config";
 
-/* ... */
+const Workers = () => {
+  const [workers, setWorkers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("all");
+  const [showModal, setShowModal] = useState(false);
+  const [selectedWorker, setSelectedWorker] = useState(null);
+  const [jobForm, setJobForm] = useState({ title: "", description: "", location: "", wage: "" });
 
-    try {
-      const res = await axios.get(`${API_URL}/api/contractor/laborers`);
-      setWorkers(res.data);
-    } catch (err) {
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
 
-/* ... */
+  useEffect(() => {
+    const fetchWorkers = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/api/contractor/laborers`);
+        setWorkers(res.data);
+      } catch (err) {
+        console.error("Error fetching workers:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchWorkers();
+  }, []);
 
+  const handleHireClick = (worker) => {
+    setSelectedWorker(worker);
+    setShowModal(true);
+  };
+
+  const handleJobSubmit = async (e) => {
+    e.preventDefault();
     try {
       await axios.post(`${API_URL}/api/jobs`, {
         contractor_id: currentUser.id,
@@ -105,7 +129,7 @@ import { API_URL } from "../../config";
                 <label>Job Location</label>
               </div>
               <div className="input-modern has-value">
-                 <input 
+                <input 
                   type="number" 
                   value={jobForm.wage} 
                   onChange={e => setJobForm({...jobForm, wage: e.target.value})} 
