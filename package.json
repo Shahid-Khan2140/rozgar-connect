@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node server/server.js",
     "dev": "nodemon server/server.js",
-    "build": "cd client && npm install && npm run build && cd .. && node move-build.js"
+    "build": "cd client && npm install --include=dev && npm run build && cd .. && node move-build.js"
   },
   "keywords": [],
   "author": "",
