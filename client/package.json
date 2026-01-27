@@ -6,7 +6,7 @@
   "main": "src/electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npx -y vite build",
     "preview": "vite preview",
     "electron": "electron src/electron/main.js",
     "electron:dev": "concurrently \"vite\" \"electron src/electron/main.js\""
