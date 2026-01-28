@@ -35,8 +35,19 @@ mongoose.connect(MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected Successfully"))
   .catch((err) => {
     console.error("❌ MongoDB Connection Error:", err);
-    process.exit(1);
+    // process.exit(1); // Don't exit immediately so we can show the error in the browser if needed, or let nodemon retry.
   });
+
+// Check DB Connection Middleware
+app.use((req, res, next) => {
+  if (mongoose.connection.readyState !== 1) { // 1 = connected
+    return res.status(503).json({ 
+      message: "Database Not Connected", 
+      error: "The server is running but cannot reach MongoDB. Check your IP whitelist in MongoDB Atlas."
+    });
+  }
+  next();
+});
 
 // ==========================
 // 3. FILE UPLOAD CONFIG (MULTER)
@@ -117,6 +128,7 @@ app.post("/api/login", async (req, res) => {
       },
     });
   } catch (err) {
+    console.error("Login Error:", err);
     res.status(500).json({ message: "Server Error" });
   }
 });
