@@ -86,6 +86,18 @@ const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString()
 
 app.get("/", (req, res) => res.send("🚀 Rozgar Connect Backend Running (MongoDB)"));
 
+app.get("/api/status", (req, res) => {
+  res.json({ 
+    status: "ok", 
+    mongo_state: mongoose.connection.readyState, // 0: disconnected, 1: connected, 2: connecting
+    mongo_host: mongoose.connection.host,
+    env_check: {
+      has_mongo_uri: !!process.env.MONGO_URI,
+      mongo_uri_start: process.env.MONGO_URI ? process.env.MONGO_URI.substring(0, 15) + "..." : "MISSING"
+    }
+  });
+});
+
 // --- UPLOAD PROFILE PICTURE ---
 app.post("/api/upload-profile-pic", upload.single("profileImage"), async (req, res) => {
   const { email } = req.body;
