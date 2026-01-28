@@ -39,13 +39,19 @@ mongoose.connect(MONGO_URI)
   });
 
 // Check DB Connection Middleware
-app.use((req, res, next) => {
-  if (mongoose.connection.readyState !== 1) { // 1 = connected
-    return res.status(503).json({ 
-      message: "Database Not Connected", 
-      error: "The server is running but cannot reach MongoDB. Check your IP whitelist in MongoDB Atlas."
-    });
+app.use(async (req, res, next) => {
+  // If disconnected (0) or disconnecting (3), try to reconnect or fail
+  if (mongoose.connection.readyState === 0 || mongoose.connection.readyState === 3) {
+    try {
+      await mongoose.connect(MONGO_URI);
+    } catch (err) {
+      return res.status(503).json({ 
+        message: "Database Connection Failed", 
+        error: err.message 
+      });
+    }
   }
+  // If connected (1) or connecting (2), proceed. Mongoose buffers requests while connecting.
   next();
 });
 
