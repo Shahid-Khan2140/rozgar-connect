@@ -13,9 +13,11 @@ import Attendance from "./dashboards/labour/Attendance";
 import Jobs from "./dashboards/labour/Jobs";
 import Payments from "./dashboards/labour/Payments";
 import Profile from "./dashboards/labour/Profile";
+import Welfare from "./dashboards/labour/Welfare";
 
 // Contractor
 // Contractor
+import ContractorDashboard from "./dashboards/contractor/Dashboard";
 import Workers from "./dashboards/contractor/Workers";
 import ContractorJobs from "./dashboards/contractor/Jobs";
 
@@ -56,11 +58,13 @@ function App() {
             <Route path="labour/jobs" element={<Jobs />} />
             <Route path="labour/payments" element={<Payments />} />
             <Route path="labour/profile" element={<Profile />} />
+            <Route path="labour/welfare" element={<Welfare />} />
 
             {/* CONTRACTOR ROUTES */}
-            {/* CONTRACTOR ROUTES */}
+            <Route path="contractor/dashboard" element={<ContractorDashboard />} />
             <Route path="contractor/workers" element={<Workers />} />
             <Route path="contractor/jobs" element={<ContractorJobs />} />
+            <Route path="contractor/govt-info" element={<Welfare />} />
             <Route path="contractor/profile" element={<Profile />} />
 
             {/* DEVELOPER ROUTES */}

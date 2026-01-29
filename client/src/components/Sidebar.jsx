@@ -7,6 +7,7 @@ import {
   FaCog,
   FaSignOutAlt,
   FaBriefcase,
+  FaShieldAlt,
 } from "react-icons/fa";
 import "../App.css";
 
@@ -32,12 +33,15 @@ const Sidebar = () => {
       { label: "Dashboard", icon: <FaHome />, path: "/labour/dashboard" },
       { label: "Jobs", icon: <FaBriefcase />, path: "/labour/jobs" },
       { label: "Payments", icon: <FaMoneyBill />, path: "/labour/payments" },
+      { label: "Schemes", icon: <FaShieldAlt />, path: "/labour/welfare" },
       { label: "Profile", icon: <FaUserTie />, path: "/labour/profile" },
     ],
 
     contractor: [
+      { label: "Dashboard", icon: <FaHome />, path: "/contractor/dashboard" },
       { label: "Workers", icon: <FaUsers />, path: "/contractor/workers" },
       { label: "My Jobs", icon: <FaBriefcase />, path: "/contractor/jobs" },
+      { label: "Labour Laws", icon: <FaShieldAlt />, path: "/contractor/govt-info" },
       { label: "Profile", icon: <FaUserTie />, path: "/contractor/profile" },
     ],
 

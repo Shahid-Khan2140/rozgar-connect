@@ -13,6 +13,9 @@ const Job = require("./models/Job");
 const Policy = require("./models/Policy");
 const Otp = require("./models/Otp");
 const Worker = require("./models/Worker");
+const Application = require("./models/Application");
+const Notification = require("./models/Notification");
+const Review = require("./models/Review");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -263,9 +266,9 @@ app.post("/api/get-user-details", async (req, res) => {
 
 // --- UPDATE FULL PROFILE ---
 app.post("/api/update-full-profile", async (req, res) => {
-  const { email, name, phone, dob, gender, address } = req.body;
+  const { email, name, phone, dob, gender, address, skill, skills } = req.body;
   try {
-    await User.findOneAndUpdate({ email }, { name, phone, dob, gender, address });
+    await User.findOneAndUpdate({ email }, { name, phone, dob, gender, address, skill, skills });
     res.json({ message: "Profile Updated Successfully" });
   } catch (err) {
     res.status(500).json({ message: "Update Failed" });
@@ -524,6 +527,198 @@ app.get("/api/policies", async (req, res) => {
   }
 });
 
+
+
+// ==========================
+// 12. NEW FEATURES ROUTES
+// ==========================
+
+// --- SEARCH JOBS ---
+app.get("/api/jobs/search", async (req, res) => {
+  const { query, location, category, wage_min, wage_max } = req.query;
+  const filter = { status: "open" };
+
+  if (query) filter.title = { $regex: query, $options: "i" };
+  if (location) filter.location = { $regex: location, $options: "i" };
+  if (category && category !== "All") filter.category = category;
+  if (wage_min || wage_max) {
+    filter.wage = {};
+    if (wage_min) filter.wage.$gte = Number(wage_min);
+    if (wage_max) filter.wage.$lte = Number(wage_max);
+  }
+
+  try {
+    const jobs = await Job.find(filter).sort({ created_at: -1 });
+    res.json(jobs);
+  } catch (err) {
+    res.status(500).json({ message: "Search Failed" });
+  }
+});
+
+// --- GET OPEN JOBS (FEED) ---
+app.get("/api/jobs/feed", async (req, res) => {
+  try {
+    const jobs = await Job.find({ status: "open" })
+                          .populate("contractor_id", "name profile_pic_url")
+                          .sort({ created_at: -1 })
+                          .limit(50);
+    res.json(jobs);
+  } catch (err) {
+    res.status(500).json({ message: "Feed Error" });
+  }
+});
+
+// --- APPLY FOR JOB ---
+app.post("/api/jobs/apply", async (req, res) => {
+  const { job_id, worker_id, contractor_id, cover_letter } = req.body;
+  try {
+    const existing = await Application.findOne({ job_id, worker_id });
+    if (existing) return res.status(400).json({ message: "Already Applied" });
+
+    await Application.create({ job_id, worker_id, contractor_id, cover_letter });
+    
+    // Notify Contractor
+    await Notification.create({
+      user_id: contractor_id,
+      title: "New Job Application",
+      message: `A worker has applied for your job.`
+    });
+
+    res.status(201).json({ message: "Application Submitted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Application Failed" });
+  }
+});
+
+// --- GET WORKER APPLICATIONS ---
+app.get("/api/labour/applications/:id", async (req, res) => {
+  try {
+    const apps = await Application.find({ worker_id: req.params.id })
+                                  .populate("job_id")
+                                  .sort({ applied_at: -1 });
+    res.json(apps);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching applications" });
+  }
+});
+
+// --- POST REVIEW ---
+app.post("/api/reviews", async (req, res) => {
+  try {
+    await Review.create(req.body);
+    res.status(201).json({ message: "Review Submitted" });
+  } catch (err) {
+    res.status(500).json({ message: "Review Failed" });
+  }
+});
+
+// --- GET NOTIFICATIONS ---
+app.get("/api/notifications/:id", async (req, res) => {
+  try {
+    const notifs = await Notification.find({ user_id: req.params.id }).sort({ created_at: -1 });
+    res.json(notifs);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching notifications" });
+  }
+});
+
+// --- SAVE JOB ---
+app.post("/api/users/save-job", async (req, res) => {
+  const { user_id, job_id } = req.body;
+  try {
+    await User.findByIdAndUpdate(user_id, { $addToSet: { saved_jobs: job_id } });
+    res.json({ message: "Job Saved" });
+  } catch (err) {
+    res.status(500).json({ message: "Save Failed" });
+  }
+});
+
+// --- GET APPLICATIONS FOR A JOB ---
+app.get("/api/jobs/:id/applications", async (req, res) => {
+  try {
+    const apps = await Application.find({ job_id: req.params.id })
+                                .populate("worker_id", "name phone skill daily_wage profile_pic_url")
+                                .sort({ applied_at: -1 });
+    res.json(apps);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching applications" });
+  }
+});
+
+// --- ACCEPT/REJECT APPLICATION ---
+app.post("/api/applications/:id/status", async (req, res) => {
+  const { status, job_id, worker_id } = req.body; // status: 'accepted' or 'rejected'
+  try {
+    const app = await Application.findByIdAndUpdate(req.params.id, { status }, { new: true });
+    
+    if (status === 'accepted') {
+       // Update Job
+       await Job.findByIdAndUpdate(job_id, { 
+         status: 'assigned', 
+         worker_id: worker_id 
+       });
+       
+       // Reject other applicants
+       await Application.updateMany(
+         { job_id: job_id, _id: { $ne: req.params.id } },
+         { status: 'rejected' }
+       );
+
+       // Notify Worker
+       await Notification.create({
+         user_id: worker_id,
+         type: 'success',
+         title: 'Application Accepted',
+         message: 'You have been hired for the job!'
+       });
+    }
+
+    res.json({ message: "Status Updated" });
+  } catch (err) {
+    res.status(500).json({ message: "Update Failed" });
+  }
+});
+
+// --- GET SAVED JOBS ---
+app.get("/api/users/saved-jobs/:id", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).populate({
+      path: 'saved_jobs',
+      populate: { path: 'contractor_id', select: 'name profile_pic_url' }
+    });
+    res.json(user ? user.saved_jobs : []);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching saved jobs" });
+  }
+});
+
+const Scheme = require("./models/Scheme");
+
+// ... (existing routes)
+
+const scrapeSchemes = require("./utils/scraper");
+
+// --- GET WELFARE SCHEMES ---
+app.get("/api/schemes", async (req, res) => {
+  try {
+    const schemes = await Scheme.find().sort({ board: 1 });
+    res.json(schemes);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching schemes" });
+  }
+});
+
+// --- SYNC SCHEMES (TRIGGER SCRAPER) ---
+app.post("/api/schemes/sync", async (req, res) => {
+  try {
+    const result = await scrapeSchemes();
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Scraping failed" });
+  }
+});
 
 // Export the app for Vercel
 module.exports = app;

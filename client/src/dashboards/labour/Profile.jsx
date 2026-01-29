@@ -48,7 +48,8 @@ const Profile = () => {
             dob: data.dob ? data.dob.split('T')[0] : "", 
             gender: data.gender || "Male",
             // IMPORTANT: Use profile_pic_url from DB to persist image
-            profilePic: data.profile_pic_url || null 
+            profilePic: data.profile_pic_url || null,
+            skills: data.skills || (data.skill ? [data.skill] : [])
           }));
         }
       } catch (err) {
@@ -105,7 +106,9 @@ const Profile = () => {
         phone: user.phone,
         dob: user.dob,
         gender: user.gender,
-        address: user.address
+        address: user.address,
+        skill: user.skills?.[0] || "", // updates legacy field for backward compatibility
+        skills: user.skills // updates new array field (need to update backend to support this if not already)
       });
       setIsEditing(false);
       alert("Profile updated successfully!");
@@ -316,6 +319,59 @@ const Profile = () => {
                     disabled={!isEditing} 
                     className="gov-input"
                   ></textarea>
+                </div>
+
+                {/* Skills Section */}
+                <div className="form-group full-width">
+                  <label>Professional Skills</label>
+                  <div className="flex gap-2 flex-wrap mb-2">
+                    {user.skills?.map((skill, index) => (
+                      <span key={index} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-1">
+                        {skill}
+                        {isEditing && (
+                          <button 
+                            onClick={() => {
+                              const newSkills = user.skills.filter((_, i) => i !== index);
+                              setUser({...user, skills: newSkills});
+                            }}
+                            className="bg-blue-200 hover:bg-red-200 text-blue-800 hover:text-red-700 rounded-full w-4 h-4 flex items-center justify-center text-xs"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                  {isEditing && (
+                    <div className="flex gap-2">
+                       <input 
+                         type="text" 
+                         className="gov-input flex-1" 
+                         placeholder="Add a skill (e.g. Masonry)"
+                         onKeyDown={(e) => {
+                           if(e.key === 'Enter') {
+                             e.preventDefault();
+                             if(e.currentTarget.value.trim()) {
+                               setUser({...user, skills: [...(user.skills || []), e.currentTarget.value.trim()]});
+                               e.currentTarget.value = "";
+                             }
+                           }
+                         }}
+                       />
+                       <button 
+                         className="bg-blue-600 text-white px-4 rounded-lg"
+                         onClick={(e) => {
+                            const input = e.currentTarget.previousSibling;
+                            if(input.value.trim()) {
+                               setUser({...user, skills: [...(user.skills || []), input.value.trim()]});
+                               input.value = "";
+                            }
+                         }}
+                       >
+                         Add
+                       </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

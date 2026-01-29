@@ -15,7 +15,9 @@ const UserSchema = new mongoose.Schema({
   profile_pic_url: String,
   
   // Specific to Labour role
-  skill: String,
+  skill: String, // Legacy, keep for backward compat
+  skills: [String], // New array format
+  saved_jobs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Job" }],
   daily_wage: Number,
   availability: { type: String, default: "available" },
   location: String,
