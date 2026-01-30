@@ -9,7 +9,8 @@ const Settings = () => {
     lang, setLang, 
     darkMode, setDarkMode, 
     user, setUser, 
-    activityLog, addLog 
+    activityLog, addLog,
+    t
   } = useOutletContext();
   
   const navigate = useNavigate();
@@ -142,7 +143,7 @@ const Settings = () => {
             <h3 style={{ borderBottom: "1px solid #eee", paddingBottom: "15px", marginBottom: "20px" }}>Administrator Profile</h3>
             <form onSubmit={handleProfileUpdate}>
                 <div style={{ marginBottom: "15px" }}>
-                    <label style={{ display:"block", marginBottom:"8px", fontSize: "13px", color: "var(--text-sec)", fontWeight: "600" }}>Full Name</label>
+                    <label style={{ display:"block", marginBottom:"8px", fontSize: "13px", color: "var(--text-sec)", fontWeight: "600" }}>{t?.fullName || "Full Name"}</label>
                     <input type="text" value={user?.name || ""} onChange={(e) => setUser({...user, name: e.target.value})} className="input-modern" style={{width: '95%', padding: '12px'}} />
                 </div>
                 <div style={{ marginBottom: "20px" }}>

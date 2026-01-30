@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { useOutletContext } from 'react-router-dom';
 import { 
   Camera, Mail, Phone, MapPin, User, FileText, 
   Shield, Award, Edit2, Save, CheckCircle 
@@ -8,6 +9,7 @@ import '../../App.css';
 import { API_URL } from "../../config";
 
 const Profile = () => {
+    const { t, setUser: setUserContext } = useOutletContext();
   const fileInputRef = useRef(null);
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("personal");
@@ -110,6 +112,13 @@ const Profile = () => {
         skill: user.skills?.[0] || "", // updates legacy field for backward compatibility
         skills: user.skills // updates new array field (need to update backend to support this if not already)
       });
+      
+      // Update global context so Layout and other components reflect changes immediately
+      const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+      const updatedGlobalUser = { ...currentUser, name: user.name };
+      localStorage.setItem("user", JSON.stringify(updatedGlobalUser));
+      setUserContext(updatedGlobalUser); // Update global state
+      
       setIsEditing(false);
       alert("Profile updated successfully!");
     } catch (err) {
@@ -251,7 +260,7 @@ const Profile = () => {
               <div className="form-layout">
                 {/* Full Name */}
                 <div className="form-group">
-                  <label>Full Name</label>
+                  <label>{t?.fullName || "Full Name"}</label>
                   <input 
                     type="text" name="name" 
                     value={user.name} onChange={handleChange} 

@@ -9,9 +9,11 @@ const UserSchema = new mongoose.Schema({
   dob: Date,
   gender: { type: String, enum: ["Male", "Female", "Other"] },
   address: String,
-  aadhaar_number: { type: String, default: "XXXX-XXXX-1234" },
+  aadhaar_number: { type: String }, // User must provide
+  pan_number: { type: String }, // User must provide
   uan_number: { type: String, default: "100900900900" },
   is_kyc_verified: { type: Boolean, default: false },
+  govt_id_proof_url: String, // URL of uploaded ID image
   profile_pic_url: String,
   
   // Specific to Labour role

@@ -72,6 +72,10 @@ const Login = () => {
   const [role, setRole] = useState("labour");       // Role Selection
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [aadhaar, setAadhaar] = useState("");
+  const [pan, setPan] = useState("");
+  const [idFile, setIdFile] = useState(null);
   
   // OTP State
   const [otp, setOtp] = useState("");
@@ -199,7 +203,8 @@ const Login = () => {
       // Call Backend API
       await axios.post(`${API_URL}/api/send-otp`, { 
         identifier: targetIdentifier, 
-        type 
+        type,
+        name // Pass the name for personalized OTP email
       });
       
       setMessage({ text: "", type: "" }); // Clear loading message
@@ -262,13 +267,19 @@ const Login = () => {
     // 3. Step 2: Verify OTP & Create Account
     else {
       try {
-        await axios.post(`${API_URL}/api/register`, { 
-          email, 
-          phone, 
-          password, 
+        const formData = new FormData();
+        formData.append("email", email);
+        formData.append("phone", phone);
+        formData.append("password", password);
+        formData.append("role", role);
+        formData.append("otp", otp);
+        formData.append("name", name);
+        formData.append("aadhaar_number", aadhaar);
+        formData.append("pan_number", pan);
+        if (idFile) formData.append("govt_id_proof", idFile);
 
-          role, // Send Role
-          otp 
+        await axios.post(`${API_URL}/api/register`, formData, {
+          headers: { "Content-Type": "multipart/form-data" }
         });
         
         // Success!
@@ -428,6 +439,31 @@ const Login = () => {
                   <div className={`input-modern stagger-6 ${confirmPassword ? "has-value" : ""}`}>
                     <input type="password" placeholder=" " value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
                     <label>Confirm Password</label>
+                  </div>
+                  
+                  {/* GOVT ID VERIFICATION */}
+                  <div className="stagger-7 p-3 bg-gray-50 rounded-lg border border-gray-100 mb-4">
+                     <p className="text-xs text-gray-500 font-bold uppercase mb-2">Government Verification</p>
+                     
+                     <div className={`input-modern ${aadhaar ? "has-value" : ""}`}>
+                        <input type="text" placeholder=" " value={aadhaar} onChange={(e) => setAadhaar(e.target.value)} required />
+                        <label>Aadhaar Number</label>
+                     </div>
+                     <div className={`input-modern ${pan ? "has-value" : ""}`}>
+                        <input type="text" placeholder=" " value={pan} onChange={(e) => setPan(e.target.value)} required />
+                        <label>PAN Card Number</label>
+                     </div>
+                     
+                     <div className="mt-2">
+                        <label className="text-xs text-gray-400 block mb-1">Upload ID Proof (Aadhar/PAN Image)</label>
+                        <input 
+                          type="file" 
+                          className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                          accept="image/*"
+                          onChange={(e) => setIdFile(e.target.files[0])}
+                          required
+                        />
+                     </div>
                   </div>
                   {/* Role is now handled by the top selector, so we hide/disable the select or sync it */}
                   <input type="hidden" value={role} />

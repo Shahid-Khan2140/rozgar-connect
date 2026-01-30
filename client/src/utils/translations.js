@@ -14,7 +14,7 @@ export const translations = {
     logout: "Logout",
     loggedInAs: "Logged in as",
     welcome: "Welcome",
-    govtTitle: "Government of India - Labour Ministry",
+    govtTitle: "Government of Gujarat - Labour & Employment Department",
     checkUpdates: "Check Updates",
     all: "All",
     labour: "Labour",
@@ -28,7 +28,9 @@ export const translations = {
     view_on: "View on",
     eligibility: "Eligibility & Docs",
     last_verified: "Last Verified",
-    checking: "Checking Govt Portals..."
+    checking: "Checking Govt Portals...",
+    hello: "Hello",
+    fullName: "Full Name"
   },
   hi: {
     dashboard: "डैशबोर्ड",
@@ -45,7 +47,7 @@ export const translations = {
     logout: "लॉग आउट",
     loggedInAs: "लॉग इन हैं",
     welcome: "स्वागत है",
-    govtTitle: "भारत सरकार - श्रम मंत्रालय",
+    govtTitle: "गुजरात सरकार - श्रम और रोजगार विभाग",
     checkUpdates: "अपडेट देखें",
     all: "सभी",
     labour: "श्रमिक",
@@ -59,7 +61,9 @@ export const translations = {
     view_on: "देखें",
     eligibility: "पात्रता और दस्तावेज",
     last_verified: "अंतिम सत्यापित",
-    checking: "सरकारी पोर्टल्स की जांच हो रही है..."
+    checking: "सरकारी पोर्टल्स की जांच हो रही है...",
+    hello: "नमस्ते",
+    fullName: "पूरा नाम"
   },
   gu: {
     dashboard: "ડેશબોર્ડ",
@@ -76,7 +80,7 @@ export const translations = {
     logout: "લૉગ આઉટ",
     loggedInAs: "લૉગ ઇન",
     welcome: "સ્વાગત છે",
-    govtTitle: "ભારત સરકાર - શ્રમ મંત્રાલય",
+    govtTitle: "ગુજરાત સરકાર - શ્રમ અને રોજગાર વિભાગ",
     checkUpdates: "અપડેટ્સ તપાસો",
     all: "બધા",
     labour: "શ્રમિક",
@@ -90,6 +94,8 @@ export const translations = {
     view_on: "પર જુઓ",
     eligibility: "લાયકાત અને દસ્તાવેજો",
     last_verified: "છેલ્લે ચકાસાયેલ",
-    checking: "સરકારી પોર્ટલ તપાસી રહ્યું છે..."
+    checking: "સરકારી પોર્ટલ તપાસી રહ્યું છે...",
+    hello: "નમસ્તે",
+    fullName: "પૂરું નામ"
   }
 };

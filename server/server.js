@@ -16,6 +16,7 @@ const Worker = require("./models/Worker");
 const Application = require("./models/Application");
 const Notification = require("./models/Notification");
 const Review = require("./models/Review");
+const HireRequest = require("./models/HireRequest");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -190,7 +191,8 @@ app.post("/api/send-otp", async (req, res) => {
 
     if (identifier.includes("@")) {
       // Format Email Content
-      const userName = user ? user.name : "User";
+      // Use provided name (for registration) or fallback to DB name or "User"
+      const userName = req.body.name || (user ? user.name : "User");
       
       const emailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
@@ -240,8 +242,9 @@ app.post("/api/send-otp", async (req, res) => {
 });
 
 // --- REGISTER ---
-app.post("/api/register", async (req, res) => {
-  const { email, phone, password, otp, name } = req.body;
+// --- REGISTER ---
+app.post("/api/register", upload.single("govt_id_proof"), async (req, res) => {
+  const { email, phone, password, otp, name, role, aadhaar_number, pan_number } = req.body;
   const identifier = email || phone;
 
   try {
@@ -249,17 +252,28 @@ app.post("/api/register", async (req, res) => {
     if (!otpRecord) return res.status(400).json({ message: "Invalid or Expired OTP" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    
+    let govt_id_proof_url = "";
+    if (req.file) {
+      govt_id_proof_url = `http://localhost:${PORT}/uploads/${req.file.filename}`;
+    }
 
     const newUser = new User({
-      name: name || "User", // Use provided name or default
+      name: name || "User", 
       email,
       phone,
       password: hashedPassword,
-      role: req.body.role || 'labour'
+      role: role || 'labour',
+      aadhaar_number,
+      pan_number,
+      govt_id_proof_url,
+      is_kyc_verified: false // pending verification
     });
 
     await newUser.save();
     await Otp.deleteMany({ identifier }); // Clear OTPs
+
+    // Send Welcome Notification? (Optional)
 
     res.status(201).json({ message: "Registration Successful" });
   } catch (err) {
@@ -546,6 +560,113 @@ app.delete("/api/admin/users/:id", async (req, res) => {
   }
 });
 
+// ==========================
+// 14. HIRE REQUEST & WORKER BROWSING
+// ==========================
+
+// --- BROWSE WORKERS (For Contractors) ---
+app.get("/api/workers/browse", async (req, res) => {
+  try {
+    // 1. Fetch all users with role 'labour'
+    // Select specific fields, explicitly EXCLUDING phone/email if needed (though we handle display on front, good to limit here)
+    // We actually need email/phone if we want to reveal it later, but standard browse should probably not verify it? 
+    // Actually, for privacy, we should project limited fields. 
+    // But wait, if we Accept on frontend, we might need to fetch full details then.
+    // Let's return basics. Privacy is handled by simply not showing the field in UI until connected.
+    
+    const workers = await User.find({ role: "labour" }).select("-password"); // Exclude password
+    
+    // 2. Attach Ratings
+    const workersWithRatings = await Promise.all(workers.map(async (w) => {
+        const reviews = await Review.find({ reviewee_id: w._id });
+        const avg = reviews.length > 0 
+           ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
+           : "New";
+        
+        // Return a safe object
+        return {
+           _id: w._id,
+           name: w.name,
+           skill: w.skill,
+           location: w.location,
+           profile_pic_url: w.profile_pic_url,
+           rating: avg,
+           review_count: reviews.length,
+           // Hide Phone/Email in this specific response if strictly needed, 
+           // but for MVP, we just won't render it in the "Card".
+        };
+    }));
+
+    res.json(workersWithRatings);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching workers" });
+  }
+});
+
+// --- CREATE HIRE REQUEST ---
+app.post("/api/hire-requests", async (req, res) => {
+  const { contractor_id, worker_id, job_type, message } = req.body;
+  try {
+    const newRequest = await HireRequest.create({
+      contractor_id,
+      worker_id,
+      job_type,
+      message,
+      status: 'pending'
+    });
+
+    // Notify Worker
+    await Notification.create({
+      user_id: worker_id,
+      type: 'info',
+      title: 'New Work Request',
+      message: `A contractor has requested you for ${job_type} work.`
+    });
+
+    res.status(201).json({ message: "Request Sent" });
+  } catch(err) {
+    res.status(500).json({ message: "Request Failed" });
+  }
+});
+
+// --- GET WORKER REQUESTS ---
+app.get("/api/hire-requests/worker/:id", async (req, res) => {
+  try {
+    const requests = await HireRequest.find({ worker_id: req.params.id })
+                                      .populate('contractor_id', 'name profile_pic_url location rating') // Contractor details
+                                      .sort({ created_at: -1 });
+    res.json(requests);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching requests" });
+  }
+});
+
+// --- UPDATE REQUEST STATUS ---
+app.put("/api/hire-requests/:id/status", async (req, res) => {
+  const { status } = req.body;
+  try {
+    const request = await HireRequest.findByIdAndUpdate(req.params.id, { status }, { new: true })
+                                     .populate('contractor_id')
+                                     .populate('worker_id');
+    
+    if (status === 'accepted') {
+        // Notify Contractor with Worker's Details
+        // Ideally we just notify "Accepted", and the UI updates to show specific details.
+        
+        await Notification.create({
+          user_id: request.contractor_id._id,
+          type: 'success',
+          title: 'Request Accepted',
+          message: `${request.worker_id.name} accepted your request! You can now contact them.`
+        });
+    }
+
+    res.json(request);
+  } catch (err) {
+    res.status(500).json({ message: "Update Failed" });
+  }
+});
+
 // --- POST POLICY ---
 app.post("/api/policies", async (req, res) => {
   try {
@@ -736,6 +857,18 @@ app.get("/api/users/saved-jobs/:id", async (req, res) => {
     res.json(user ? user.saved_jobs : []);
   } catch (err) {
     res.status(500).json({ message: "Error fetching saved jobs" });
+  }
+});
+
+// --- GET CONTRACTOR SENT REQUESTS ---
+app.get("/api/hire-requests/contractor/:id", async (req, res) => {
+  try {
+    const requests = await HireRequest.find({ contractor_id: req.params.id })
+      .populate("worker_id", "name profile_pic_url skill location phone")
+      .sort({ created_at: -1 });
+    res.json(requests);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching sent requests" });
   }
 });
 

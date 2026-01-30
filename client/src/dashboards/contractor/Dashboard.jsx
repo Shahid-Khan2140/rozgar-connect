@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useOutletContext } from "react-router-dom";
 import { API_URL } from "../../config";
 import { Users, Briefcase, DollarSign, Clock, TrendingUp, AlertCircle } from "lucide-react";
 
 const ContractorDashboard = () => {
+    const { t } = useOutletContext();
   const [stats, setStats] = useState({
     activeWorkers: 0,
     openJobs: 0,
@@ -65,7 +67,7 @@ const ContractorDashboard = () => {
   return (
     <div className="animate-fade-in p-6">
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-800">Hello, {user.name} 👋</h2>
+        <h2 className="text-2xl font-bold text-gray-800">{user.name ? `${t?.hello || "Hello"}, ${user.name} 👋` : `${t?.hello || "Hello"} 👋`}</h2>
         <p className="text-gray-500">Here is what is happening with your projects today.</p>
       </div>
 

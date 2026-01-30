@@ -303,7 +303,7 @@ const ContractorJobs = () => {
                   <button onClick={() => setViewAppsJob(null)} className="p-1 hover:bg-gray-200 rounded-full"><X size={20}/></button>
                </div>
                
-               <div className="p-4 overflow-y-auto flex-1">
+                <div className="p-4 overflow-y-auto flex-1">
                   {applications.length === 0 ? (
                      <p className="text-center text-gray-500 py-8">No applications yet.</p>
                   ) : (
@@ -328,18 +328,47 @@ const ContractorJobs = () => {
                            
                            <div className="flex items-center gap-2">
                               {app.status === 'applied' ? (
-                                 <button 
-                                   onClick={() => handleAccept(app._id, app.worker_id._id)}
-                                   className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 transition flex items-center gap-2"
-                                 >
-                                    <Check size={16}/> Hire
-                                 </button>
+                                 <>
+                                    <button 
+                                      onClick={async () => {
+                                         if(confirm("Reject this applicant?")) {
+                                            try {
+                                              await axios.post(`${API_URL}/api/applications/${app._id}/status`, { status: 'rejected' });
+                                              fetchApplications(viewAppsJob.id || viewAppsJob._id);
+                                            } catch(e) { alert("Failed to reject"); }
+                                         }
+                                      }}
+                                      className="bg-red-50 text-red-600 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-red-100 transition"
+                                      title="Reject"
+                                    >
+                                       <X size={16}/>
+                                    </button>
+                                    <button 
+                                      onClick={() => handleAccept(app._id, app.worker_id._id)}
+                                      className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 transition flex items-center gap-2"
+                                    >
+                                       <Check size={16}/> Hire
+                                    </button>
+                                 </>
                               ) : (
-                                 <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
-                                    app.status === 'accepted' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                 }`}>
-                                    {app.status}
-                                 </span>
+                                 <div className="flex flex-col items-end gap-1">
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
+                                       app.status === 'accepted' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                    }`}>
+                                       {app.status}
+                                    </span>
+                                    {app.status === 'accepted' && (
+                                       <button 
+                                          onClick={() => {
+                                             const phone = app.worker_id.phone || "919999999999";
+                                             window.open(`https://wa.me/${phone}`, '_blank');
+                                          }}
+                                          className="text-xs text-green-600 font-bold hover:underline flex items-center gap-1"
+                                       >
+                                          WhatsApp <User size={10}/>
+                                       </button>
+                                    )}
+                                 </div>
                               )}
                            </div>
                         </div>

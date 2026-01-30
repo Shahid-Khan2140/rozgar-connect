@@ -27,6 +27,29 @@ const Layout = () => {
   
   const notifRef = useRef(null);
 
+  // Fetch fresh user data on mount to ensure name update
+  useEffect(() => {
+    const fetchUserData = async () => {
+        try {
+            const saved = localStorage.getItem("user");
+            if (!saved) return;
+            
+            const localUser = JSON.parse(saved);
+            if (!localUser?.email) return;
+
+            const res = await axios.post(`${API_URL}/api/get-user-details`, { email: localUser.email });
+            if (res.data) {
+                const updatedUser = { ...localUser, name: res.data.name };
+                setUser(updatedUser);
+                localStorage.setItem("user", JSON.stringify(updatedUser));
+            }
+        } catch (err) {
+            console.error("Layout user sync failed", err);
+        }
+    };
+    fetchUserData();
+  }, []);
+
   useEffect(() => {
     if (user?.id) {
       fetchNotifications();
