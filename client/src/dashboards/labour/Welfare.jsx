@@ -1,22 +1,93 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useOutletContext } from "react-router-dom"; // Import context hook
 import { API_URL } from "../../config";
-import { ExternalLink, Shield, Award, BookOpen, AlertTriangle } from "lucide-react";
+import { ExternalLink, Shield } from "lucide-react";
 
 const Welfare = () => {
+  const { t, user } = useOutletContext(); // Get translations and user from Layout
+
   const [schemes, setSchemes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [targetFilter, setTargetFilter] = useState("All"); // All, Labour, Contractor
+  const [targetFilter, setTargetFilter] = useState("All"); 
+  const [activeBoard, setActiveBoard] = useState("All");
 
-  // ... (fetch logic same)
+  // Determine available filters based on Role
+  const isLabour = user?.role === 'labour';
+  const isContractor = user?.role === 'contractor';
 
+  const filterOptions = isLabour 
+      ? ['All', 'Labour'] 
+      : isContractor 
+          ? ['All', 'Contractor', 'Labour'] // Contractors might want to see Labour schemes too
+          : ['All', 'Labour', 'Contractor']; // Fallback/Developer
+
+  // --- 1. Fetch Schemes on Mount ---
+  const fetchSchemes = async () => {
+     try {
+        const res = await axios.get(`${API_URL}/api/schemes`);
+        setSchemes(res.data);
+     } catch(err) {
+        console.error(err);
+     } finally {
+        setLoading(false);
+     }
+  };
+
+  useEffect(() => {
+     fetchSchemes();
+  }, []);
+
+  // --- 2. Sync Logic (Trigger Scraper) ---
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+       await axios.post(`${API_URL}/api/schemes/sync`);
+       // Re-fetch after sync
+       fetchSchemes();
+    } catch(err) {
+       console.error("Sync failed:", err);
+       alert("Failed to sync with government portals. Please try again.");
+    } finally {
+       setSyncing(false);
+    }
+  };
+  
   const filtered = schemes.filter(s => {
+      // 1. Board Filter
       const boardMatch = activeBoard === "All" || s.board === activeBoard;
-      const targetMatch = targetFilter === "All" || s.target_group === "Both" || s.target_group === targetFilter;
-      return boardMatch && targetMatch;
+      
+      // 2. Target Group Filter (Button Selection)
+      const exactTargetMatch = targetFilter === "All" || s.target_group === "Both" || s.target_group === targetFilter;
+      
+      // 3. Role-Based Safety Filter (Hidden Logic)
+      // If user is Labour, NEVER show "Contractor" only schemes, even in "All"
+      const roleSafety = isLabour ? s.target_group !== 'Contractor' : true;
+
+      return boardMatch && exactTargetMatch && roleSafety;
   });
 
-  // ... (getIcon logic same)
+  // --- 3. Helper: Badge Colors ---
+  const getBadgeColor = (board) => {
+     switch(board) {
+        case 'GLWB': return 'bg-blue-100 text-blue-700';
+        case 'GRWWB': return 'bg-purple-100 text-purple-700';
+        case 'GBOCWWB': return 'bg-orange-100 text-orange-700';
+        case 'eShram': return 'bg-indigo-100 text-indigo-700';
+        case 'Govt': return 'bg-green-100 text-green-700';
+        default: return 'bg-gray-100 text-gray-700';
+     }
+  };
+  
+  // Translation Helper for Buttons
+  const getButtonLabel = (key) => {
+      if(key === 'All') return t?.everyone || "Everyone";
+      if(key === 'Labour') return t?.for_labour || "For Labours";
+      if(key === 'Contractor') return t?.for_contractor || "For Contractors";
+      return key;
+  };
 
   return (
     <div className="animate-fade-in p-6">
@@ -25,9 +96,9 @@ const Welfare = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-             <Shield className="text-orange-500"/> Official Government Information
+             <Shield className="text-orange-500"/> {t?.official_info || "Official Government Information"}
            </h2>
-           <p className="text-gray-500 text-sm mt-1">Verified schemes & regulations from Gujarat Government Portals.</p>
+           <p className="text-gray-500 text-sm mt-1">{t?.verified_schemes || "Verified schemes & regulations from Gujarat Government Portals."}</p>
         </div>
         
         {/* Sync & Portal Link */}
@@ -37,7 +108,7 @@ const Welfare = () => {
              disabled={syncing}
              className={`px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 border border-blue-200 hover:bg-blue-50 transition text-blue-700 ${syncing ? 'opacity-50' : ''}`}
           >
-             <span className={syncing ? "animate-spin" : ""}>⟳</span> {syncing ? "Checking Govt Portals..." : "Check Updates"}
+             <span className={syncing ? "animate-spin" : ""}>⟳</span> {syncing ? (t?.checking || "Checking...") : (t?.checkUpdates || "Check Updates")}
           </button>
         </div>
       </div>
@@ -45,14 +116,14 @@ const Welfare = () => {
       {/* Target Audience Toggle */}
       <div className="flex justify-center mb-6">
          <div className="bg-gray-100 p-1 rounded-lg flex">
-            {['All', 'Labour', 'Contractor'].map(t => (
-               <button
-                  key={t}
-                  onClick={() => setTargetFilter(t)}
-                  className={`px-6 py-2 rounded-md text-sm font-bold transition ${targetFilter === t ? 'bg-white shadow text-blue-800' : 'text-gray-500 hover:text-gray-700'}`}
-               >
-                  {t === 'All' ? 'Everyone' : `For ${t}s`}
-               </button>
+            {filterOptions.map(option => (
+                <button 
+                    key={option} 
+                    onClick={() => setTargetFilter(option)} 
+                    className={`px-6 py-2 rounded-md text-sm font-bold transition ${targetFilter === option ? 'bg-white shadow text-blue-800' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    {getButtonLabel(option)}
+                </button>
             ))}
          </div>
       </div>
@@ -62,7 +133,7 @@ const Welfare = () => {
          {['All', 'GLWB', 'GRWWB', 'GBOCWWB', 'eShram', 'Govt'].map(b => (
             <button key={b} onClick={() => setActiveBoard(b)} 
                className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition ${activeBoard === b ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border hover:bg-gray-50'}`}>
-               {b === 'All' ? 'All Boards' : b}
+               {b === 'All' ? (t?.all || "All Boards") : b}
             </button>
          ))}
       </div>
@@ -93,7 +164,7 @@ const Welfare = () => {
                   </p>
 
                   <div className="bg-gray-50 rounded-lg p-3 mb-4 mx-2">
-                     <div className="text-xs font-bold text-gray-500 mb-1 uppercase">Eligibility & Docs</div>
+                     <div className="text-xs font-bold text-gray-500 mb-1 uppercase">{t?.eligibility || "Eligibility & Docs"}</div>
                      <p className="text-xs text-gray-700 mb-1">✅ {scheme.eligibility || "Check details"}</p>
                      <p className="text-xs text-gray-500">📄 {scheme.documents?.join(", ") || "Aadhaar Card"}</p>
                   </div>
@@ -105,10 +176,10 @@ const Welfare = () => {
                        rel="noopener noreferrer"
                        className="w-full border border-blue-600 text-blue-600 font-semibold py-2 rounded-lg hover:bg-blue-50 transition flex items-center justify-center gap-2 text-sm"
                     >
-                       View on {scheme.board} Portal <ExternalLink size={14}/>
+                       {t?.view_on || "View on"} {scheme.board} Portal <ExternalLink size={14}/>
                     </a>
                     <div className="text-[10px] text-gray-400 text-center mt-2">
-                       Last Verified: {new Date(scheme.last_checked || Date.now()).toLocaleDateString()}
+                       {t?.last_verified || "Last Verified"}: {new Date(scheme.last_checked || Date.now()).toLocaleDateString()}
                     </div>
                   </div>
                </div>

@@ -125,7 +125,8 @@ app.post("/api/upload-profile-pic", upload.single("profileImage"), async (req, r
 
 // --- LOGIN ---
 app.post("/api/login", async (req, res) => {
-  const { identifier, password } = req.body;
+  let { identifier, password } = req.body;
+  identifier = identifier?.trim();
 
   try {
     const user = await User.findOne({
@@ -136,6 +137,17 @@ app.post("/api/login", async (req, res) => {
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ message: "Invalid Password" });
+    
+    // STRICT ROLE ENFORCEMENT
+    const requestedRole = req.body.role;
+    
+    // Developer Exception: Developers can login from any role tab (Labour/Contractor)
+    // For everyone else, strictly enforce that they log in via their correct role tab.
+    if (user.role === 'developer') {
+        // Allow access, ignore requestedRole mismatch
+    } else if (requestedRole && user.role !== requestedRole) {
+       return res.status(403).json({ message: `Access Denied. You are registered as a ${user.role}, please select the correct role.` });
+    }
 
     res.json({
       message: "Login Successful",
@@ -177,11 +189,44 @@ app.post("/api/send-otp", async (req, res) => {
     await Otp.create({ identifier, otp });
 
     if (identifier.includes("@")) {
+      // Format Email Content
+      const userName = user ? user.name : "User";
+      
+      const emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+        <div style="background-color: #0f2a44; padding: 25px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px;"><span style="color: #ff9800;">રોજગાર</span> Connect</h1>
+          <p style="color: #cbd5e0; margin: 5px 0 0; font-size: 13px;">In Official Partnership with Government of Gujarat</p>
+        </div>
+        
+        <div style="padding: 30px;">
+          <h2 style="color: #333; margin-top: 0;">Hello, ${userName}</h2>
+          <p style="color: #666; font-size: 16px; line-height: 1.5;">To ensure the security of your account, please verify your identity with the code below.</p>
+          
+          <div style="background-color: #f8fafc; padding: 20px; margin: 25px 0; text-align: center; border-radius: 8px; border: 2px dashed #ff9800;">
+            <span style="font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #0f2a44; display: block;">${otp}</span>
+            <span style="font-size: 12px; color: #888; display: block; margin-top: 5px;">VERIFICATION CODE</span>
+          </div>
+          
+          <p style="color: #666; font-size: 14px;">This code is valid for 5 minutes. Please do not share this code with anyone.</p>
+          
+          <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
+            <p style="color: #333; font-weight: bold; margin: 0;">S.F.SANDHI</p>
+            <p style="color: #888; font-size: 12px; margin: 2px 0 0;">CEO, <span style="color: #ff9800;">રોજગાર</span> Connect</p>
+          </div>
+        </div>
+        
+        <div style="background-color: #f4f6f8; padding: 15px; text-align: center; font-size: 12px; color: #999;">
+          &copy; 2026 <span style="color: #ff9800;">રોજગાર</span> Connect. All rights reserved.
+        </div>
+      </div>
+      `;
+
       await transporter.sendMail({
-        from: '"Rozgar Connect" <no-reply@rozgar.com>',
+        from: '"રોજગાર Connect" <no-reply@rozgar.com>',
         to: identifier,
-        subject: "Authentication Code",
-        html: `<h3>Your Code: <span style="color:#ff9800">${otp}</span></h3><p>Valid for 5 minutes.</p>`,
+        subject: "Your Authentication Code - રોજગાર Connect",
+        html: emailHtml,
       });
       res.json({ message: "OTP sent to Email!" });
     } else {
@@ -196,7 +241,7 @@ app.post("/api/send-otp", async (req, res) => {
 
 // --- REGISTER ---
 app.post("/api/register", async (req, res) => {
-  const { email, phone, password, otp } = req.body;
+  const { email, phone, password, otp, name } = req.body;
   const identifier = email || phone;
 
   try {
@@ -206,6 +251,7 @@ app.post("/api/register", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = new User({
+      name: name || "User", // Use provided name or default
       email,
       phone,
       password: hashedPassword,
@@ -718,6 +764,23 @@ app.post("/api/schemes/sync", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Scraping failed" });
   }
+});
+
+// ==========================
+// 13. SCHEDULED TASKS (CRON)
+// ==========================
+const cron = require("node-cron");
+
+// Run Scraper Every Day at Midnight (00:00)
+// Format: minute hour day-of-month month day-of-week
+cron.schedule("0 0 * * *", async () => {
+   console.log("🕛 Running Daily Scheme Update Job...");
+   try {
+       const result = await scrapeSchemes();
+       console.log(`✅ Daily Update Complete. Added: ${result.added}, Found: ${result.totalFound}`);
+   } catch (err) {
+       console.error("❌ Daily Update Failed:", err);
+   }
 });
 
 // Export the app for Vercel

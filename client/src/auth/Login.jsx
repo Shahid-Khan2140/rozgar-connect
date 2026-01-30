@@ -14,17 +14,17 @@ import { API_URL } from "../config";
 // ==========================================
 // This component handles the OTP input display and timer logic
 const OtpSection = ({ target, onResend, otp, setOtp, timer }) => (
-  <div className="otp-section animate-pop-in">
+  <div className="otp-section animate-slide-up">
     {/* Security Icon Animation */}
     <div className="security-icon pulse-icon">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="30">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
         <path fillRule="evenodd" d="M12.516 2.17a.75.75 0 00-1.032 0 11.209 11.209 0 01-7.877 3.08.75.75 0 00-.722.515A12.74 12.74 0 002.25 9.75c0 5.942 4.064 10.933 9.563 12.348a.749.749 0 00.374 0c5.499-1.415 9.563-6.406 9.563-12.348 0-1.39-.223-2.73-.635-3.985a.75.75 0 00-.722-.516l-.143.001c-2.996 0-5.717-1.17-7.734-3.08zm3.094 8.016a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
       </svg>
     </div>
 
-    <h3 className="otp-title">Authentication Required</h3>
+    <h3 className="otp-title">Verification Code</h3>
     <p className="otp-subtitle">
-      Code sent to <span className="email-highlight">{target}</span>
+      Enter the 6-digit code sent to <br/> <span className="email-highlight">{target}</span>
     </p>
 
     {/* OTP Input Field */}
@@ -32,10 +32,9 @@ const OtpSection = ({ target, onResend, otp, setOtp, timer }) => (
       <input 
         type="text" 
         className="otp-input-styled" 
-        placeholder="0 0 0 0 0 0" 
+        placeholder="• • • • • •" 
         value={otp} 
         onChange={(e) => { 
-          // Only allow numbers and max 6 digits
           if (/^\d*$/.test(e.target.value) && e.target.value.length <= 6) {
             setOtp(e.target.value); 
           }
@@ -48,9 +47,9 @@ const OtpSection = ({ target, onResend, otp, setOtp, timer }) => (
     {/* Timer / Resend Link */}
     <div className={`timer-badge ${timer < 10 && timer > 0 ? "pulse-red" : ""}`}>
       {timer > 0 ? ( 
-        <span>Expires in {timer}s</span> 
+        <span>Resend in {timer}s</span> 
       ) : ( 
-        <span className="resend-link" onClick={onResend}>Resend Code</span> 
+        <span className="resend-link" onClick={onResend}>Resend OTP</span> 
       )}
     </div>
   </div>
@@ -65,7 +64,10 @@ const Login = () => {
   
   // Form Fields
   const [identifier, setIdentifier] = useState(""); // Email/Phone for Login
+  const [name, setName] = useState(""); // Full Name
   const [email, setEmail] = useState("");           // Email for Register
+
+
   const [phone, setPhone] = useState("");           // Phone for Register
   const [role, setRole] = useState("labour");       // Role Selection
   const [password, setPassword] = useState("");
@@ -184,6 +186,7 @@ const Login = () => {
     setShowOtpInput(false); 
     setOtp(""); 
     setTimer(0);
+    setName(""); // Reset name
     // Only clear password when switching back to login to prevent frustration
     if(newView === 'login') { setPassword(""); }
   };
@@ -223,13 +226,20 @@ const Login = () => {
       
       if (res.data.message === "Login Successful" || res.data.message.includes("success")) { 
           // 1. Save User Data to LocalStorage
-          localStorage.setItem("user", JSON.stringify(res.data.user)); 
+          const userData = res.data.user;
+          localStorage.setItem("user", JSON.stringify(userData)); 
           
-          // 2. Redirect to Dashboard
-          navigate("/labour/dashboard"); 
+          // 2. Redirect based on Verified Role
+          if (userData.role === 'contractor') {
+             navigate("/contractor/dashboard");
+          } else if (userData.role === 'developer') {
+             navigate("/developer/users");
+          } else {
+             navigate("/labour/dashboard"); // Default to labour
+          }
       }
     } catch (err) { 
-      // Handle Invalid Password / User Not Found
+      // Handle Invalid Password / User Not Found / Role Mismatch
       setMessage({ text: err.response?.data?.message || "Invalid Credentials", type: "error" }); 
     }
   };
@@ -316,7 +326,7 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Role Selector Tabs (Text Only - Professional) */}
+          {/* Role Selector Tabs (Text Only - Professional) - Developer Button Hidden */}
           <div className="role-selector stagger-1">
              <button 
                type="button"
@@ -331,13 +341,6 @@ const Login = () => {
                onClick={() => setRole('contractor')}
              >
                Contractor
-             </button>
-             <button 
-               type="button"
-               className={`role-tab ${role === 'developer' ? 'active' : ''}`}
-               onClick={() => setRole('developer')}
-             >
-               Admin
              </button>
           </div>
 
@@ -367,7 +370,7 @@ const Login = () => {
                   onChange={(e) => setIdentifier(e.target.value)} 
                   required 
                 />
-                <label>Email or Mobile Number</label>
+                <label>Email ID or Phone Number</label>
               </div>
               <div className={`input-modern stagger-4 ${password ? "has-value" : ""}`}>
                 <input 
@@ -406,6 +409,10 @@ const Login = () => {
               {!showOtpInput ? (
                 <>
                   {/* Step 1 Inputs */}
+                  <div className={`input-modern stagger-2 ${name ? "has-value" : ""}`}>
+                    <input type="text" placeholder=" " value={name} onChange={(e) => setName(e.target.value)} required />
+                    <label>Full Name (As per Aadhaar)</label>
+                  </div>
                   <div className={`input-modern stagger-3 ${email ? "has-value" : ""}`}>
                     <input type="email" placeholder=" " value={email} onChange={(e) => setEmail(e.target.value)} required />
                     <label>Email Address</label>

@@ -5,6 +5,7 @@ import { API_URL } from "../config";
 import "../App.css"; 
 import Sidebar from "../components/Sidebar"; 
 import { Bell, Moon, Sun, LogOut, CheckCircle, Info } from "lucide-react";
+import { translations } from "../utils/translations";
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ const Layout = () => {
   });
   
   const [darkMode, setDarkMode] = useState(false);
+  const [lang, setLang] = useState(() => localStorage.getItem("lang") || 'en');
   const [notifications, setNotifications] = useState([]);
   const [showNotif, setShowNotif] = useState(false);
   
@@ -40,6 +42,13 @@ const Layout = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []); // Run once on mount
 
+  const changeLanguage = (newLang) => {
+    setLang(newLang);
+    localStorage.setItem("lang", newLang);
+  };
+
+  const t = translations[lang] || translations['en'];
+
   const fetchNotifications = async () => {
     if(!user?.id) return;
     try {
@@ -56,8 +65,17 @@ const Layout = () => {
   };
 
   const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    document.body.classList.toggle('dark-mode');
+    const newMode = !darkMode;
+    setDarkMode(newMode);
+    
+    // Toggle 'dark' class on html tag for Tailwind
+    if (newMode) {
+      document.documentElement.classList.add('dark');
+      document.body.classList.add('dark-mode');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark-mode');
+    }
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -66,17 +84,17 @@ const Layout = () => {
     <div className={`app-layout ${darkMode ? "dark" : ""}`}>
       
       {/* SIDEBAR */}
-      <Sidebar userRole={user?.role} />
+      <Sidebar userRole={user?.role} lang={lang} t={t} />
 
       {/* MAIN CONTENT */}
       <main className="main-content relative">
         <header className="top-header flex justify-between items-center px-6 py-4 bg-[#0f2a44] text-white shadow-md border-b-4 border-orange-500">
           <div>
             <h3 className="font-semibold text-lg text-white tracking-wide">
-              Government of India - Labour Ministry
+              {t.govtTitle}
             </h3>
             <p className="text-xs text-blue-200 mt-1 font-medium">
-              Welcome, {user?.name || "User"}
+              {t.welcome}, {user?.name || "User"}
             </p>
           </div>
           
@@ -88,12 +106,13 @@ const Layout = () => {
 
              {/* Language Toggle */}
              <div className="relative group">
-                <button className="p-2 rounded hover:bg-white/10 text-xs font-bold border border-blue-400">
-                  {lang === 'en' ? 'EN' : 'HI'}
+                <button className="p-2 rounded hover:bg-white/10 text-xs font-bold border border-blue-400 w-10 text-center uppercase">
+                  {lang}
                 </button>
-                <div className="absolute right-0 mt-2 w-24 bg-white rounded shadow-lg hidden group-hover:block z-50 text-gray-800">
-                   <button onClick={() => setLang('en')} className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm">English</button>
-                   <button onClick={() => setLang('hi')} className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm">Hindi</button>
+                <div className="absolute right-0 mt-2 w-32 bg-white rounded shadow-lg hidden group-hover:block z-50 text-gray-800 border border-gray-200">
+                   <button onClick={() => changeLanguage('en')} className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm font-medium">English (EN)</button>
+                   <button onClick={() => changeLanguage('hi')} className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm font-medium">Hindi (HI)</button>
+                   <button onClick={() => changeLanguage('gu')} className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm font-medium">Gujarati (GU)</button>
                 </div>
              </div>
 
@@ -102,7 +121,7 @@ const Layout = () => {
                onClick={() => alert("Emergency Helpline: 1800-ROZGAR (Mock)")}
                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs font-bold animate-pulse"
              >
-               SOS
+               {t.sos}
              </button>
 
              {/* Notifications */}
@@ -146,13 +165,13 @@ const Layout = () => {
                onClick={handleLogout}
                className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded text-sm font-semibold transition flex items-center gap-2"
              >
-               <LogOut size={16} /> Logout
+               <LogOut size={16} /> {t.logout}
              </button>
           </div>
         </header>
 
         <div className="p-6 h-[calc(100vh-80px)] overflow-y-auto bg-gray-50">
-          <Outlet context={{ user, setUser, darkMode }} />
+          <Outlet context={{ user, setUser, darkMode, lang, t }} />
         </div>
       </main>
     </div>

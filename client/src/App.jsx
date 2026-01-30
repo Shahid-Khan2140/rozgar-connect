@@ -45,7 +45,7 @@ function App() {
               index
               element={
                 role ? (
-                  <Navigate to={`/${role}/dashboard`} replace />
+                  <Navigate to={role === 'developer' ? "/developer/users" : `/${role}/dashboard`} replace />
                 ) : (
                   <Navigate to="/login" replace />
                 )

@@ -11,12 +11,13 @@ import {
 } from "react-icons/fa";
 import "../App.css";
 
-const Sidebar = () => {
+const Sidebar = ({ userRole, lang, t }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const role = user?.role || "labour";
+  // In case sidebar is used standalone (which it shouldn't be usually in this layout)
+  // we fallback to localstorage or defaults, but typically 't' comes from parent
+  const role = userRole || "labour";
 
   const handleLogout = () => {
     if (window.confirm("Are you sure you want to logout?")) {
@@ -28,27 +29,28 @@ const Sidebar = () => {
   const isActive = (path) =>
     location.pathname.startsWith(path) ? "active" : "";
 
+  // Dynamic Menus based on translations
   const menus = {
     labour: [
-      { label: "Dashboard", icon: <FaHome />, path: "/labour/dashboard" },
-      { label: "Jobs", icon: <FaBriefcase />, path: "/labour/jobs" },
-      { label: "Payments", icon: <FaMoneyBill />, path: "/labour/payments" },
-      { label: "Schemes", icon: <FaShieldAlt />, path: "/labour/welfare" },
-      { label: "Profile", icon: <FaUserTie />, path: "/labour/profile" },
+      { label: t?.dashboard || "Dashboard", icon: <FaHome />, path: "/labour/dashboard" },
+      { label: t?.jobs || "Jobs", icon: <FaBriefcase />, path: "/labour/jobs" },
+      { label: t?.payments || "Payments", icon: <FaMoneyBill />, path: "/labour/payments" },
+      { label: t?.schemes || "Schemes", icon: <FaShieldAlt />, path: "/labour/welfare" },
+      { label: t?.profile || "Profile", icon: <FaUserTie />, path: "/labour/profile" },
     ],
 
     contractor: [
-      { label: "Dashboard", icon: <FaHome />, path: "/contractor/dashboard" },
-      { label: "Workers", icon: <FaUsers />, path: "/contractor/workers" },
-      { label: "My Jobs", icon: <FaBriefcase />, path: "/contractor/jobs" },
-      { label: "Labour Laws", icon: <FaShieldAlt />, path: "/contractor/govt-info" },
-      { label: "Profile", icon: <FaUserTie />, path: "/contractor/profile" },
+      { label: t?.dashboard || "Dashboard", icon: <FaHome />, path: "/contractor/dashboard" },
+      { label: t?.workers || "Workers", icon: <FaUsers />, path: "/contractor/workers" },
+      { label: t?.myJobs || "My Jobs", icon: <FaBriefcase />, path: "/contractor/jobs" },
+      { label: t?.labourLaws || "Labour Laws", icon: <FaShieldAlt />, path: "/contractor/govt-info" },
+      { label: t?.profile || "Profile", icon: <FaUserTie />, path: "/contractor/profile" },
     ],
 
     developer: [
-      { label: "Users", icon: <FaUsers />, path: "/developer/users" },
-      { label: "Policies", icon: <FaBriefcase />, path: "/developer/policies" },
-      { label: "Settings", icon: <FaCog />, path: "/developer/settings" },
+      { label: t?.users || "Users", icon: <FaUsers />, path: "/developer/users" },
+      { label: t?.policies || "Policies", icon: <FaBriefcase />, path: "/developer/policies" },
+      { label: t?.settings || "Settings", icon: <FaCog />, path: "/developer/settings" },
     ],
   };
 
@@ -59,7 +61,7 @@ const Sidebar = () => {
       </h3>
 
       <div className="sidebar-section">
-        {menus[role].map((item) => (
+        {menus[role]?.map((item) => (
           <div
             key={item.path}
             className={`menu-item ${isActive(item.path)}`}
@@ -72,14 +74,14 @@ const Sidebar = () => {
       </div>
 
       <div className="sidebar-footer">
-        <p className="user-role">Logged in as</p>
+        <p className="user-role">{t?.loggedInAs || "Logged in as"}</p>
         <strong className="user-name">
           {role.charAt(0).toUpperCase() + role.slice(1)}
         </strong>
 
         <button className="logout-btn" onClick={handleLogout}>
           <FaSignOutAlt />
-          <span>Logout</span>
+          <span>{t?.logout || "Logout"}</span>
         </button>
       </div>
     </aside>

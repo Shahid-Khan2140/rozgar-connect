@@ -33,23 +33,23 @@ const Users = () => {
     <div className="animate-fade-in">
       <h2 className="page-title">User Management</h2>
       <div className="card" style={{overflowX: 'auto'}}>
-        <table style={{width:'100%', borderCollapse:'collapse'}}>
+        <table>
           <thead>
-            <tr style={{textAlign:'left', borderBottom:'2px solid #eee'}}>
-              <th style={{padding:'15px'}}>ID</th>
-              <th style={{padding:'15px'}}>Name</th>
-              <th style={{padding:'15px'}}>Role</th>
-              <th style={{padding:'15px'}}>Contact</th>
-              <th style={{padding:'15px'}}>Joined</th>
-              <th style={{padding:'15px'}}>Action</th>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Role</th>
+              <th>Contact</th>
+              <th>Joined</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
             {users.map(u => (
-              <tr key={u.id} style={{borderBottom:'1px solid #f9f9f9'}}>
-                <td style={{padding:'15px'}}>#{u.id}</td>
-                <td style={{padding:'15px', fontWeight:'bold'}}>{u.name || "N/A"}</td>
-                <td style={{padding:'15px'}}>
+              <tr key={u.id}>
+                <td>#{u.id}</td>
+                <td className="font-bold">{u.name || "N/A"}</td>
+                <td>
                   <span style={{
                     padding:'4px 8px', borderRadius:'4px', fontSize:'12px', fontWeight:'bold',
                     background: u.role === 'contractor' ? '#e3f2fd' : (u.role === 'developer' ? '#f3e5f5' : '#e8f5e9'),
@@ -58,14 +58,14 @@ const Users = () => {
                     {u.role.toUpperCase()}
                   </span>
                 </td>
-                <td style={{padding:'15px'}}>
+                <td>
                   {u.email}<br/>
-                  <small style={{color:'#666'}}>{u.phone}</small>
+                  <small className="text-secondary">{u.phone}</small>
                 </td>
-                <td style={{padding:'15px'}}>{new Date(u.created_at).toLocaleDateString()}</td>
-                <td style={{padding:'15px'}}>
+                <td>{new Date(u.created_at).toLocaleDateString()}</td>
+                <td>
                   {u.role !== 'developer' && (
-                    <button onClick={() => handleDelete(u.id)} className="btn-modern" style={{background:'#d32f2f', padding:'5px 10px', fontSize:'12px'}}>
+                    <button onClick={() => handleDelete(u.id)} className="btn-modern" style={{background:'#d32f2f', padding:'5px 10px', fontSize:'12px', width:'auto'}}>
                       Delete
                     </button>
                   )}
