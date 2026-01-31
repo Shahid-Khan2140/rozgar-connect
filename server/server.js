@@ -126,20 +126,35 @@ app.post("/api/upload-profile-pic", upload.single("profileImage"), async (req, r
 
 // --- LOGIN ---
 app.post("/api/login", async (req, res) => {
-  let { identifier, password } = req.body;
-  identifier = identifier?.trim();
-
   try {
+    let { identifier, password } = req.body;
+    
+    // 1. Validate Input
+    if (!identifier || !password) {
+      return res.status(400).json({ message: "Identifier and Password are required" });
+    }
+
+    // 2. Normalize Identifier
+    identifier = String(identifier).trim();
+
+    // 3. Find User
     const user = await User.findOne({
       $or: [{ email: identifier }, { phone: identifier }]
     });
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    // 4. Validate User Data Integrity
+    if (!user.password) {
+      console.error(`❌ User ${identifier} exists but has no password hash.`);
+      return res.status(500).json({ message: "Account corrupted (missing password). Please reset." });
+    }
+
+    // 5. Check Password
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ message: "Invalid Password" });
     
-    // STRICT ROLE ENFORCEMENT
+    // 6. STRICT ROLE ENFORCEMENT
     const requestedRole = req.body.role;
     
     // Developer Exception: Developers can login from any role tab (Labour/Contractor)
