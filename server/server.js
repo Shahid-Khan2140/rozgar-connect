@@ -127,6 +127,14 @@ app.post("/api/upload-profile-pic", upload.single("profileImage"), async (req, r
 // --- LOGIN ---
 app.post("/api/login", async (req, res) => {
   try {
+    console.log("👉 Login Request Received:", req.body);
+    
+    // 0. CHECK DB CONNECTION
+    if (mongoose.connection.readyState !== 1) {
+       console.error("❌ DB NOT CONNECTED. State:", mongoose.connection.readyState);
+       return res.status(503).json({ message: `Database service unavailable (State: ${mongoose.connection.readyState})` });
+    }
+
     let { identifier, password } = req.body;
     
     // 1. Validate Input
@@ -917,18 +925,19 @@ app.post("/api/schemes/sync", async (req, res) => {
 // ==========================
 // 13. SCHEDULED TASKS (CRON)
 // ==========================
-const cron = require("node-cron");
-
-// Run Scraper Every Day at Midnight (00:00)
-// Format: minute hour day-of-month month day-of-week
-cron.schedule("0 0 * * *", async () => {
-   console.log("🕛 Running Daily Scheme Update Job...");
-   try {
-       const result = await scrapeSchemes();
-       console.log(`✅ Daily Update Complete. Added: ${result.added}, Found: ${result.totalFound}`);
-   } catch (err) {
-       console.error("❌ Daily Update Failed:", err);
-   }
+// ==========================
+// 15. GLOBAL ERROR HANDLER
+// ==========================
+app.use((err, req, res, next) => {
+  console.error("🔥 GLOBAL_ERROR_HANDLER:", err);
+  if (res.headersSent) {
+    return next(err);
+  }
+  res.status(500).json({
+    message: "Internal Server Error",
+    error: err.message, // Return the actual error message for debugging
+    stack: process.env.NODE_ENV === 'production' ? '🥞' : err.stack
+  });
 });
 
 // Export the app for Vercel
