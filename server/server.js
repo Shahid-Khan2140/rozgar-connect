@@ -111,20 +111,30 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // ==========================
-// 4. EMAIL CONFIGURATION
+// 4. EMAIL CONFIGURATION (Safe)
 // ==========================
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+let transporter = null;
 
-transporter.verify((err) => {
-  if (err) console.error("❌ Email Service Error:", err.message);
-  else console.log("✅ Email Service Ready");
-});
+if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+  try {
+    transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    transporter.verify((err) => {
+      if (err) console.error("❌ Email Service Error:", err.message);
+      else console.log("✅ Email Service Ready");
+    });
+  } catch (err) {
+    console.error("⚠️ Email Setup Failed:", err.message);
+  }
+} else {
+  console.warn("⚠️ Email credentials missing. Email service disabled.");
+}
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -285,13 +295,18 @@ app.post("/api/send-otp", async (req, res) => {
       </div>
       `;
 
-      await transporter.sendMail({
-        from: '"રોજગાર Connect" <no-reply@rozgar.com>',
-        to: identifier,
-        subject: "Your Authentication Code - રોજગાર Connect",
-        html: emailHtml,
-      });
-      res.json({ message: "OTP sent to Email!" });
+      if (transporter) {
+        await transporter.sendMail({
+          from: '"રોજગાર Connect" <no-reply@rozgar.com>',
+          to: identifier,
+          subject: "Your Authentication Code - રોજગાર Connect",
+          html: emailHtml,
+        });
+        res.json({ message: "OTP sent to Email!" });
+      } else {
+        console.warn("Email service not configured. Cannot send email OTP.");
+        res.status(500).json({ message: "Email service not available." });
+      }
     } else {
       console.log(`📱 SMS OTP for ${identifier}: ${otp}`);
       res.json({ message: "OTP sent to Mobile!" });
