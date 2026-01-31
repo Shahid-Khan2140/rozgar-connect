@@ -33,30 +33,68 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // ==========================
 // 2. MONGODB CONNECTION
 // ==========================
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/rozgar_connect";
+// ==========================
+// 2. MONGODB CONNECTION (Serverless Optimized)
+// ==========================
+const MONGO_URI = process.env.MONGO_URI;
 
-mongoose.connect(MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected Successfully"))
-  .catch((err) => {
-    console.error("❌ MongoDB Connection Error:", err);
-    // process.exit(1); // Don't exit immediately so we can show the error in the browser if needed, or let nodemon retry.
-  });
+if (!MONGO_URI) {
+  console.error("❌ FATAL: process.env.MONGO_URI is undefined!");
+} else {
+  console.log("✅ MONGO_URI Found (Length: " + MONGO_URI.length + ")");
+}
 
-// Check DB Connection Middleware
-app.use(async (req, res, next) => {
-  // If disconnected (0) or disconnecting (3), try to reconnect or fail
-  if (mongoose.connection.readyState === 0 || mongoose.connection.readyState === 3) {
-    try {
-      await mongoose.connect(MONGO_URI);
-    } catch (err) {
-      return res.status(503).json({ 
-        message: "Database Connection Failed", 
-        error: err.message 
-      });
-    }
+// Global cached connection for hot reloads/serverless reuse
+let cached = global.mongoose;
+
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
+async function connectDB() {
+  if (cached.conn) {
+    return cached.conn;
   }
-  // If connected (1) or connecting (2), proceed. Mongoose buffers requests while connecting.
-  next();
+
+  if (!cached.promise) {
+    const opts = {
+      bufferCommands: false, // Disable Mongoose buffering
+    };
+    
+    // Fallback to localhost ONLY if explicitly not in production, otherwise fail
+    const targetURI = MONGO_URI || "mongodb://localhost:27017/rozgar_connect";
+
+    console.log("🔄 Connecting to MongoDB...");
+    cached.promise = mongoose.connect(targetURI, opts).then((mongoose) => {
+      console.log("✅ New MongoDB Connection Established");
+      return mongoose;
+    });
+  }
+  
+  try {
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    console.error("❌ MongoDB Connection Failed:", e);
+    throw e;
+  }
+
+  return cached.conn;
+}
+
+// Middleware to ensure DB is connected before handling request
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error("🔥 Critical Database Error in Middleware:", err);
+    res.status(503).json({ 
+      message: "Database Connection Failed", 
+      error: err.message,
+      hint: "Check server logs for MONGO_URI issues" 
+    });
+  }
 });
 
 // ==========================
