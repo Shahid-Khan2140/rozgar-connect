@@ -248,6 +248,11 @@ const Login = () => {
       // Handle Invalid Password / User Not Found / Role Mismatch / Network Errors
       const errorMsg = err.response?.data?.message || "Login Failed. Check connection or credentials.";
       setMessage({ text: errorMsg, type: "error" }); 
+      
+      // CRITICAL: Alert the user if it's a 500 error so they can see the exact backend issue
+      if (err.response?.status === 500) {
+           alert("Server Error (500): " + (err.response?.data?.message || "Unknown Error"));
+      }
     }
   };
 
