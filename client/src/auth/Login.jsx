@@ -244,8 +244,10 @@ const Login = () => {
           }
       }
     } catch (err) { 
-      // Handle Invalid Password / User Not Found / Role Mismatch
-      setMessage({ text: err.response?.data?.message || "Invalid Credentials", type: "error" }); 
+      console.error("Login Error:", err);
+      // Handle Invalid Password / User Not Found / Role Mismatch / Network Errors
+      const errorMsg = err.response?.data?.message || "Login Failed. Check connection or credentials.";
+      setMessage({ text: errorMsg, type: "error" }); 
     }
   };
 
